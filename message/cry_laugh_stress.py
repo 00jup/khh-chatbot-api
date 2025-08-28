@@ -140,25 +140,10 @@ def check_surprise(msg):
     return None
 
 
-def check_caps_lock(msg):
-    """대문자 도배"""
-    if len([c for c in msg if c.isupper()]) >= len(msg) * 0.7 and len(msg) > 5:
-        return "소리 지르지 마세요"
-    return None
-
-
-def check_repeat_chars(msg):
-    """글자 반복"""
-    for char in set(msg):
-        if msg.count(char) >= 5 and char.isalpha():
-            return f"{char} 그만 써요"
-    return None
-
-
 def check_question_spam(msg):
     """물음표 도배"""
-    if msg.count("?") >= 3 or msg.count("？") >= 3:
-        return "질문이 너무 많아요"
+    if msg.count("?") >= 5 or msg.count("？") >= 5:
+        return "물음표가 너무 많아요"
     return None
 
 
@@ -228,8 +213,9 @@ def check_weather_mood(msg):
         "햇살": "좋은 날씨네요",
         "구름": "흐린 날이네요"
     }
+    tokens = msg.split()
     for word, response in weather_words.items():
-        if word in msg:
+        if word in tokens:
             return response
     return None
 
