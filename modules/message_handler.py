@@ -5,7 +5,9 @@ from message.graduate import check_graduate_message
 from message.admin import check_admin_message
 from message.cry_laugh_stress import check_cry_laugh_stress_message
 from message.meme import check_meme_message
-from datetime import datetime, timedelta  # 이게 파일 맨 위에 있나?
+from datetime import datetime, timedelta
+import re
+import random
 
 
 class MessageHandler:
@@ -33,13 +35,16 @@ class MessageHandler:
         # 조용 상태 체크 및 해제
         if self._is_silent():
             # 침묵 해제 명령어만 처리
-            if "말해" in msg or "대답해" in msg or "말하라" in msg:
+            if self._is_unsilence_command(msg):
+                print(f"🔊 조용 해제 명령어 감지: '{msg}' from {sender}")
+                self.bot_state['isSilent'] = False
                 self.bot_state['silentUntil'] = None
                 return "다시 대답하겠다"
             return None  # 침묵 중이면 아무 응답 안함
 
-        # 조용히 해 명령어 체크 (새로 추가)
-        if "조용히 해" in msg or "조용히해" in msg or "닥쳐" in msg:
+        # 조용히 해 명령어 체크 (개선된 버전)
+        if self._is_silence_command(msg):
+            print(f"🔇 조용 명령어 감지: '{msg}' from {sender}")
             return self._make_silent()
 
         # 메모리 기능 체크 (우선순위 높음)
@@ -98,11 +103,73 @@ class MessageHandler:
 
         return True
 
+    def _is_silence_command(self, msg):
+        """조용 명령어인지 확인 (개선된 버전)"""
+        # 다양한 조용 명령어 패턴들
+        silence_patterns = [
+            r'조용.*해',  # 조용해, 조용히해, 조용히 해
+            r'조용',      # 조용
+            r'닥쳐',      # 닥쳐, 닥쳐라
+            r'시끄러',    # 시끄러워, 시끄럽다
+            r'입.*닥쳐',  # 입 닥쳐
+            r'그만.*말해', # 그만 말해
+            r'조용히',    # 조용히
+            r'쉿',        # 쉿
+            r'조용.*좀',  # 조용 좀
+            r'말.*그만',  # 말 그만
+            r'shut.*up',  # shut up (영어)
+        ]
+        
+        # 대소문자 구분 없이 체크
+        msg_lower = msg.lower()
+        
+        for pattern in silence_patterns:
+            if re.search(pattern, msg_lower):
+                return True
+        
+        return False
+
+    def _is_unsilence_command(self, msg):
+        """조용 모드 해제 명령어인지 확인"""
+        # 다양한 조용 해제 명령어 패턴들
+        unsilence_patterns = [
+            r'말해',      # 말해, 말해줘
+            r'대답해',    # 대답해, 대답해줘
+            r'말하라',    # 말하라
+            r'다시.*말',  # 다시 말해
+            r'돌아와',    # 돌아와
+            r'활동.*시작', # 활동 시작
+            r'그만.*조용', # 그만 조용
+            r'조용.*그만', # 조용 그만
+            r'다시.*활동', # 다시 활동
+            r'wake.*up',  # wake up (영어)
+            r'come.*back', # come back (영어)
+        ]
+        
+        # 대소문자 구분 없이 체크
+        msg_lower = msg.lower()
+        
+        for pattern in unsilence_patterns:
+            if re.search(pattern, msg_lower):
+                return True
+        
+        return False
+
     def _make_silent(self):
         """조용 모드 설정"""
         self.bot_state['isSilent'] = True
         self.bot_state['silentUntil'] = datetime.now() + timedelta(minutes=10)
-        return "10분 동안 조용히 한다"
+        
+        # 다양한 조용 응답들
+        silence_responses = [
+            "10분 동안 조용히 한다",
+            "알겠다. 10분 동안 조용히 있겠다",
+            "🤐 10분간 침묵 모드",
+            "조용히 할게... 10분 후에 다시 말하겠다",
+            "😴 10분 동안 조용...",
+        ]
+        
+        return random.choice(silence_responses)
 
     def _handle_basic_messages(self, msg):
         """기본 메시지 처리 (하드코딩된 응답들)"""

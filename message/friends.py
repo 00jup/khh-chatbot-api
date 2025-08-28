@@ -1,9 +1,15 @@
 import datetime
 import random
+import re
+from collections import defaultdict
+
+# 친구별 마지막 응답 시간 저장 (rate limiting)
+last_response_time = defaultdict(float)
+COOLDOWN_SECONDS = 30  # 30초 쿨다운
 
 
 def check_friends_message(msg):
-    """친구들 이름이 포함된 메시지 체크"""
+    """친구들 이름이 포함된 메시지 체크 (개선된 버전)"""
 
     friends_responses = {
         "하리": [
@@ -157,9 +163,33 @@ def check_friends_message(msg):
         # "친구이름": ["응답1", "응답2", "응답3"],
     }
 
-    # 메시지에 친구 이름이 포함되어 있는지 체크
+    # 메시지에 친구 이름이 단독으로 포함되어 있는지 체크
+    current_time = datetime.datetime.now().timestamp()
+    
     for friend_name in friends_responses.keys():
-        if friend_name in msg:
+        # 이름이 단독으로 언급되었는지 체크 (한국어 특화)
+        # 공백이나 문장 시작/끝에서만 매칭되도록 함
+        # 예: "제제"는 매칭, "제제가", "제제는", "제제야" 등은 매칭되지 않음
+        
+        # 메시지를 공백으로 분할하여 단어별로 체크
+        words = msg.split()
+        name_found = False
+        
+        for word in words:
+            # 구두점 제거 후 비교 (쉼표, 마침표, 느낌표, 물음표 등)
+            clean_word = re.sub(r'[^\w]', '', word)
+            if clean_word == friend_name:
+                name_found = True
+                break
+        
+        if name_found:
+            # rate limiting 체크
+            if current_time - last_response_time[friend_name] < COOLDOWN_SECONDS:
+                continue  # 아직 쿨다운 중이므로 응답하지 않음
+            
+            # 마지막 응답 시간 업데이트
+            last_response_time[friend_name] = current_time
+            
             response = friends_responses[friend_name]
             if isinstance(response, list):
                 return random.choice(response)
